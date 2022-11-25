@@ -1,114 +1,111 @@
-import { format, formatDistanceToNow } from 'date-fns'
-import ptBR from 'date-fns/locale/pt-BR'
-import { ChangeEvent, FormEvent, InvalidEvent, useState } from 'react'
-import { Avatar } from './Avatar'
-import { Comment } from './Comment'
-import style from './Post.module.css'
+import { format, formatDistanceToNow } from "date-fns";
+import ptBR from "date-fns/locale/pt-BR";
+import { ChangeEvent, FormEvent, InvalidEvent, useState } from "react";
+import { IPost, IPostAuthor, IPostContent } from "../shared/types";
+import { Avatar } from "./Avatar";
+import { Comment } from "./Comment";
+import style from "./Post.module.css";
 
-interface IAuthor {
-    name: string,
-    role: string,
-    avatarUrl: string,
-}
+interface IPostProps extends IPost {}
 
-interface IContent {
-    type: 'paragraph' | 'link'
-    content: string
-}
+export function Post({ author, publishedAt, content }: IPostProps) {
+  const [comments, setComments] = useState(["Post bacana em?"]);
 
-interface IPostProps {
-    author: IAuthor,
-    publishedAt: Date,
-    content: IContent[],
+  const [newCommentText, setNewCommentText] = useState("");
 
-}
+  const publishedDateFormatted = format(
+    publishedAt,
+    "d 'de' LLLL 'às' HH:mm'h'",
+    { locale: ptBR }
+  );
 
-export function Post({author, publishedAt, content}: IPostProps) {
+  const publishedDateRelativeToNow = formatDistanceToNow(publishedAt, {
+    locale: ptBR,
+  });
 
-    const [comments, setComments] = useState([
-        'Post bacana em?'
-    ]  )
+  function handleCreateNewComment(event: FormEvent) {
+    event.preventDefault();
 
-    const [newCommentText, setNewCommentText] = useState('')
+    setComments([...comments, newCommentText]);
+    setNewCommentText("");
+  }
 
-    const publishedDateFormatted = format(publishedAt, "d 'de' LLLL 'às' HH:mm'h'", {locale: ptBR})
+  function handleNewCommentChange(event: ChangeEvent<HTMLTextAreaElement>) {
+    event.target.setCustomValidity("");
+    setNewCommentText(event.target.value);
+  }
 
-    const publishedDateRelativeToNow = formatDistanceToNow(publishedAt, {locale: ptBR})
+  function deleteComment(commentToDelete: string) {
+    const commentsWithoutDeletedOne = comments.filter((comment) => {
+      return comment !== commentToDelete;
+    });
 
-    function handleCreateNewComment (event: FormEvent){
-        event.preventDefault()
+    setComments(commentsWithoutDeletedOne);
+  }
 
-       
+  function handleNewCommentInvalid(event: InvalidEvent<HTMLTextAreaElement>) {
+    event.target.setCustomValidity("Este campo é obrigatório!");
+  }
 
-        setComments([...comments, newCommentText]);
-        setNewCommentText('');
-    }
+  return (
+    <article className={style.post}>
+      <header>
+        <div className={style.author}>
+          <Avatar hasBorder src={author.avatarUrl} />
+          <div className={style.authorInfo}>
+            <strong>{author.name}</strong>
+            <span>{author.role}</span>
+          </div>
+        </div>
+        <time title={publishedDateFormatted} dateTime="2022-11-12 11:10">
+          {publishedDateRelativeToNow}
+        </time>
+      </header>
 
-    function handleNewCommentChange(event: ChangeEvent< HTMLTextAreaElement >) {
-        event.target.setCustomValidity('')
-        setNewCommentText(event.target.value)
-    }
+      <div className={style.content}>
+        {content.map((line) => {
+          if (line.type === "paragraph") {
+            return <p key={line.content}>{line.content}</p>;
+          } else if (line.type === "link") {
+            return (
+              <p key={line.content}>
+                <a href="https://github.com/IvanFilh?tab=repositories">
+                  {line.content}
+                </a>
+              </p>
+            );
+          }
+        })}
+      </div>
+      <form onSubmit={handleCreateNewComment} className={style.commentForm}>
+        <strong>Deixe seu feedback</strong>
 
-    function deleteComment(commentToDelete: string) {
+        <textarea
+          placeholder="Deixe um comentário"
+          name="comment"
+          onChange={handleNewCommentChange}
+          value={newCommentText}
+          onInvalid={handleNewCommentInvalid}
+          required
+        />
 
-        const commentsWithoutDeletedOne = comments.filter(comment => {
-            return comment !== commentToDelete
-        })
-
-        setComments(commentsWithoutDeletedOne);
-    }
-
-    function handleNewCommentInvalid (event: InvalidEvent < HTMLTextAreaElement >) {
-        event.target.setCustomValidity('Este campo é obrigatório!')
-    }
-
-    return (
-        <article className={style.post}>
-            <header>
-                <div className={style.author}>
-                    <Avatar hasBorder src={author.avatarUrl} />
-                    <div className={style.authorInfo}>
-                        <strong>{author.name}</strong>
-                        <span>{author.role}</span>
-                    </div>
-                </div>
-                <time title={publishedDateFormatted} dateTime='2022-11-12 11:10'>
-                {publishedDateRelativeToNow}
-                </time>
-
-            </header>
-
-            <div className={style.content}>
-                    {content.map(line=>{
-                        if(line.type ==='paragraph') {
-                            return <p key={line.content}>{line.content}</p>;
-                        } else if (line.type === 'link') {
-                            return <p key={line.content}><a href="https://github.com/IvanFilh?tab=repositories">{line.content}</a></p>
-                        }
-                    })}
-            </div>
-            <form onSubmit={handleCreateNewComment} className={style.commentForm}>
-                <strong>Deixe seu feedback</strong>
-
-                <textarea 
-                placeholder='Deixe um comentário'
-                name='comment'
-                onChange = {handleNewCommentChange}
-                value={newCommentText}
-                onInvalid={handleNewCommentInvalid}
-                required
-                />
-
-                <footer>
-                    <button type="submit" disabled={newCommentText.length== 0}>
-                        Publicar</button>
-                </footer>
-            </form>
-            <div className={style.commentList}>
-                {comments.map(comment =>{
-                    return <Comment key={comment} content={comment} onDeleteComment={deleteComment}/>
-                })}
-            </div>
-        </article>
-    )
+        <footer>
+          <button type="submit" disabled={newCommentText.length == 0}>
+            Publicar
+          </button>
+        </footer>
+      </form>
+      <div className={style.commentList}>
+        {comments.map((comment) => {
+          return (
+            <Comment
+              key={comment}
+              content={comment}
+              onDeleteComment={deleteComment}
+            />
+          );
+        })}
+      </div>
+    </article>
+  );
 }
